@@ -63,16 +63,16 @@ app.post('/admin/login', async (req, res) => {
 
         // 動態欄位查詢
         const sql = `
-      SELECT 
+        SELECT
         \`${ID_COL}\`   AS id,
         email,
         \`${PASS_COL}\` AS pwd
         ${ROLE_COL ? `, \`${ROLE_COL}\` AS role` : `, 'admin' AS role`}
         ${STATUS_COL ? `, \`${STATUS_COL}\` AS status` : `, 'active' AS status`}
-      FROM users
-      WHERE email = ?
-      LIMIT 1
-    `;
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+        `;
         const [rows] = await pool.query(sql, [email]);
         const u = rows[0];
         if (!u) return res.status(401).json({ error: '帳號不存在' });
@@ -124,16 +124,16 @@ app.post('/seller/login', (req, res) => simpleLogin(req, res, 'seller'));
 app.get('/api/users', async (_req, res) => {
     try {
         const sql = `
-      SELECT 
-        \`${ID_COL}\` AS id,
-        email
-        ${NAME_COL ? `, \`${NAME_COL}\` AS name` : `, NULL AS name`}
-        ${ROLE_COL ? `, \`${ROLE_COL}\` AS role` : `, NULL AS role`}
-        ${STATUS_COL ? `, \`${STATUS_COL}\` AS status` : `, NULL AS status`}
-        ${CREATED_COL ? `, \`${CREATED_COL}\` AS created_at` : `, NULL AS created_at`}
-      FROM users
-      ORDER BY \`${ID_COL}\` DESC
-    `;
+            SELECT
+            \`${ID_COL}\` AS id,
+            email
+            ${NAME_COL ? `, \`${NAME_COL}\` AS name` : `, NULL AS name`}
+            ${ROLE_COL ? `, \`${ROLE_COL}\` AS role` : `, NULL AS role`}
+            ${STATUS_COL ? `, \`${STATUS_COL}\` AS status` : `, NULL AS status`}
+            ${CREATED_COL ? `, \`${CREATED_COL}\` AS created_at` : `, NULL AS created_at`}
+            FROM users
+            ORDER BY \`${ID_COL}\` DESC
+        `;
         const [rows] = await pool.query(sql);
         res.json(rows);
     } catch (e) {
@@ -167,6 +167,118 @@ app.post('/api/users', async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+
+// 取得檢舉清單（預設 pending）
+app.get('/api/reports', async (req, res) => {
+    try {
+        const status = (req.query.status || 'pending').toString();
+        const [rows] = await pool.query(
+            `SELECT report_id AS id, reporter_id, target_type, target_id,
+              reason_code, reason_text, status, created_at
+       FROM reports
+       WHERE status = ?
+       ORDER BY report_id DESC`,
+            [status]
+        );
+        res.json(rows);
+    } catch (e) {
+        console.error('GET /api/reports', e);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// 建立檢舉（給前台使用）
+app.post('/api/reports', async (req, res) => {
+    try {
+        const { reporter_id, target_type, target_id, reason_code, reason_text } = req.body || {};
+        if (!reporter_id || !target_type || !target_id || !reason_code)
+            return res.status(400).json({ error: 'Missing fields' });
+
+        const [r] = await pool.query(
+            `INSERT INTO reports (reporter_id, target_type, target_id, reason_code, reason_text)
+       VALUES (?,?,?,?,?)`,
+            [reporter_id, target_type, target_id, reason_code, reason_text || null]
+        );
+        res.status(201).json({ ok: true, id: r.insertId });
+    } catch (e) {
+        console.error('POST /api/reports', e);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// 更新檢舉狀態（管理員處理）
+app.patch('/api/reports/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const { status } = req.body || {}; // in_review / resolved / rejected
+        if (!id || !status) return res.status(400).json({ error: 'Missing id or status' });
+
+        await pool.query(`UPDATE reports SET status=? WHERE report_id=?`, [status, id]);
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('PATCH /api/reports/:id', e);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// 更新使用者（部分欄位更新：name/role/status）
+app.patch('/api/users/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const { name, role, status } = req.body || {};
+        if (!id) return res.status(400).json({ error: 'Bad id' });
+
+        const sets = [], vals = [];
+        if (typeof name !== 'undefined' && name !== null) { sets.push(`${NAME_COL ? `\`${NAME_COL}\`` : 'name'} = ?`); vals.push(name); }
+        if (typeof role !== 'undefined' && role !== null && ROLE_COL) { sets.push(`\`${ROLE_COL}\` = ?`); vals.push(role); }
+        if (typeof status !== 'undefined' && status !== null && STATUS_COL) { sets.push(`\`${STATUS_COL}\` = ?`); vals.push(status); }
+
+        if (!sets.length) return res.status(400).json({ error: 'No fields' });
+
+        vals.push(id);
+        const sql = `UPDATE users SET ${sets.join(', ')} WHERE \`${ID_COL}\` = ?`;
+        await pool.query(sql, vals);
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('PATCH /api/users/:id', e);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// 刪除使用者
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (!id) return res.status(400).json({ error: 'Bad id' });
+
+        await pool.query(`DELETE FROM users WHERE \`${ID_COL}\` = ?`, [id]);
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('DELETE /api/users/:id', e);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// （可選）重設密碼
+app.post('/api/users/:id/reset-password', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const { password } = req.body || {};
+        if (!id || !password) return res.status(400).json({ error: 'Missing id or password' });
+
+        // 明碼版（之後改 bcrypt.hash）
+        await pool.query(
+            `UPDATE users SET \`${PASS_COL}\` = ? WHERE \`${ID_COL}\` = ?`,
+            [password, id]
+        );
+        res.json({ ok: true });
+    } catch (e) {
+        console.error('POST /api/users/:id/reset-password', e);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+
 
 // -------------------- 啟動 --------------------
 const port = Number(process.env.PORT || 3000);
