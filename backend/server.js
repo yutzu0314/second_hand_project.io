@@ -3,7 +3,6 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
-import bcrypt from 'bcrypt';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -15,7 +14,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// --- MySQL Pool ---
+// MySQL
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT || 3306),
@@ -25,61 +24,150 @@ const pool = mysql.createPool({
     connectionLimit: 10
 });
 
-// --- 靜態頁：/login 與 /admin ---
+// -------------------- 靜態頁 --------------------
 app.use('/login', express.static(path.join(__dirname, 'public/login')));
 app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
-
-// 預設導向
 app.get('/', (req, res) => res.redirect('/login'));
 
-// --- API：登入 ---
-app.post('/api/auth/login', async (req, res) => {
+// -------------------- 動態偵測欄位 --------------------
+let ID_COL = 'id';
+let PASS_COL = 'password';          // 若只有 password_hash 也會自動切過去
+let NAME_COL = 'name';
+let ROLE_COL = 'role';
+let STATUS_COL = null;              // 有就用，沒有就當 active
+let CREATED_COL = 'created_at';
+
+async function detectUserColumns() {
+    const [cols] = await pool.query('SHOW COLUMNS FROM users');
+    const set = new Set(cols.map(c => c.Field));
+
+    ID_COL = set.has('user_id') ? 'user_id' : (set.has('id') ? 'id' : 'id');
+    PASS_COL = set.has('password') ? 'password' : (set.has('password_hash') ? 'password_hash' : 'password');
+    NAME_COL = set.has('name') ? 'name' : (set.has('username') ? 'username' : null);
+    ROLE_COL = set.has('role') ? 'role' : null;
+    STATUS_COL = set.has('status') ? 'status' : null;
+    CREATED_COL = set.has('created_at') ? 'created_at' : (set.has('create_time') ? 'create_time' : null);
+
+    console.log('[users columns]',
+        { ID_COL, PASS_COL, NAME_COL, ROLE_COL, STATUS_COL, CREATED_COL });
+}
+
+// 啟動前偵測一次
+await detectUserColumns();
+
+// -------------------- API：明碼登入（先跑通） --------------------
+app.post('/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body || {};
-        if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
+        if (!email || !password) return res.status(400).json({ error: '缺少 email 或 password' });
 
-        const [rows] = await pool.query('SELECT * FROM users WHERE email=? LIMIT 1', [email]);
-        if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' });
+        // 動態欄位查詢
+        const sql = `
+      SELECT 
+        \`${ID_COL}\`   AS id,
+        email,
+        \`${PASS_COL}\` AS pwd
+        ${ROLE_COL ? `, \`${ROLE_COL}\` AS role` : `, 'admin' AS role`}
+        ${STATUS_COL ? `, \`${STATUS_COL}\` AS status` : `, 'active' AS status`}
+      FROM users
+      WHERE email = ?
+      LIMIT 1
+    `;
+        const [rows] = await pool.query(sql, [email]);
+        const u = rows[0];
+        if (!u) return res.status(401).json({ error: '帳號不存在' });
+        if (u.status !== 'active') return res.status(403).json({ error: '帳號未啟用或已停用' });
 
-        const user = rows[0];
-        const ok = await bcrypt.compare(password, user.password_hash);
-        if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+        // 先明碼比對（之後再換成 bcrypt.compare(password, password_hash)）
+        if (u.pwd !== password) return res.status(401).json({ error: '密碼錯誤' });
+        // 若沒有 role 欄位就視為 admin；有 role 就檢查
+        if (ROLE_COL && !['admin', 'superadmin'].includes(u.role)) {
+            return res.status(403).json({ error: '沒有後台權限' });
+        }
 
-        // Demo：不做 JWT，直接回基本資訊
-        res.json({ id: user.id, email: user.email, role: user.role });
+        res.json({ token: 'DEV_TOKEN', id: u.id, email: u.email, role: u.role ?? 'admin' });
     } catch (e) {
-        console.error(e);
+        console.error('POST /admin/login', e);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-// --- API：取得使用者列表（給 admin 頁面）---
-app.get('/api/users', async (req, res) => {
+
+// 共用：一般登入檢查（指定角色）
+async function simpleLogin(req, res, roleWanted) {
+    const { email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ error: '缺少 email 或 password' });
+
+    // 用前面偵測到的欄位名稱
+    const [rows] = await pool.query(
+        `SELECT \`${ID_COL}\` AS id, email, \`${PASS_COL}\` AS pwd
+            ${ROLE_COL ? `, \`${ROLE_COL}\` AS role` : `, 'buyer' AS role`}
+            ${STATUS_COL ? `, \`${STATUS_COL}\` AS status` : `, 'active' AS status`}
+     FROM users WHERE email = ? LIMIT 1`,
+        [email]
+    );
+    const u = rows[0];
+    if (!u) return res.status(401).json({ error: '帳號不存在' });
+    if (u.pwd !== password) return res.status(401).json({ error: '密碼錯誤' });
+    if (u.status !== 'active') return res.status(403).json({ error: '帳號未啟用或已停用' });
+    if (roleWanted && ROLE_COL && u.role !== roleWanted)
+        return res.status(403).json({ error: `需要 ${roleWanted} 身分` });
+
+    res.json({ success: true, token: 'DEV_TOKEN', id: u.id, role: u.role });
+}
+
+app.post('/buyer/login', (req, res) => simpleLogin(req, res, 'buyer'));
+app.post('/seller/login', (req, res) => simpleLogin(req, res, 'seller'));
+
+
+// -------------------- API：使用者列表 --------------------
+app.get('/api/users', async (_req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, email, role, created_at FROM users ORDER BY id DESC');
+        const sql = `
+      SELECT 
+        \`${ID_COL}\` AS id,
+        email
+        ${NAME_COL ? `, \`${NAME_COL}\` AS name` : `, NULL AS name`}
+        ${ROLE_COL ? `, \`${ROLE_COL}\` AS role` : `, NULL AS role`}
+        ${STATUS_COL ? `, \`${STATUS_COL}\` AS status` : `, NULL AS status`}
+        ${CREATED_COL ? `, \`${CREATED_COL}\` AS created_at` : `, NULL AS created_at`}
+      FROM users
+      ORDER BY \`${ID_COL}\` DESC
+    `;
+        const [rows] = await pool.query(sql);
         res.json(rows);
     } catch (e) {
-        console.error(e);
+        console.error('GET /api/users', e);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-// --- API：新增使用者（帳號管理頁可能會用到）---
+// -------------------- API：新增使用者（先明碼寫入） --------------------
 app.post('/api/users', async (req, res) => {
     try {
-        const { email, password, role = 'user' } = req.body || {};
+        const { email, password, role = 'buyer', status = 'active', name = null } = req.body || {};
         if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
-        const hash = await bcrypt.hash(password, 10);
-        await pool.query('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)', [email, hash, role]);
+
+        // 組動態欄位清單
+        const fields = ['email', PASS_COL];
+        const vals = [email, password];
+
+        if (NAME_COL) { fields.push(NAME_COL); vals.push(name); }
+        if (ROLE_COL) { fields.push(ROLE_COL); vals.push(role); }
+        if (STATUS_COL) { fields.push(STATUS_COL); vals.push(status); }
+
+        const placeholders = fields.map(() => '?').join(',');
+        const sql = `INSERT INTO users (${fields.map(f => `\`${f}\``).join(',')}) VALUES (${placeholders})`;
+
+        await pool.query(sql, vals);
         res.status(201).json({ ok: true });
     } catch (e) {
         if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Email exists' });
-        console.error(e);
+        console.error('POST /api/users', e);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
+// -------------------- 啟動 --------------------
 const port = Number(process.env.PORT || 3000);
-app.listen(port, () => {
-    console.log('Backend running on :' + port);
-});
+app.listen(port, () => console.log('Backend running on :' + port));

@@ -1,63 +1,67 @@
+// public/login/script_login.js － 通用整合版
 document.addEventListener('DOMContentLoaded', () => {
-  // 綁定三個表單（如果頁面只有一個也沒關係）
-  ['buyerForm', 'sellerForm', 'adminForm'].forEach(fid => {
-    const form = document.getElementById(fid);
-    if (form) form.addEventListener('submit', (e) => handleSubmit(e, fid));
-  });
+  // 三種角色都綁定（頁面沒有對應表單也沒關係）
+  bindLogin('adminForm',  '/admin/login',  () => '/admin/');
+  bindLogin('sellerForm', '/seller/login', () => '/seller/');  // 之後改成你的賣家首頁路徑
+  bindLogin('buyerForm',  '/buyer/login',  () => '/buyer/');   // 之後改成你的買家首頁路徑
 });
 
-async function handleSubmit(event, formId) {
-  event.preventDefault();
+function bindLogin(formId, apiPath, resolveRedirect) {
+  const form = document.getElementById(formId);
+  if (!form) return;
 
-  const form = event.target;
-  const msg = form.querySelector('.error-msg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-  // 依 formId 取得對應的輸入欄位 ID
-  const userInput = form.querySelector(`#${formId.replace('Form', '')}Username`);
-  const passInput = form.querySelector(`#${formId.replace('Form', '')}Password`);
+    const msg = form.querySelector('.error-msg');
+    const submitBtn = form.querySelector('button[type="submit"]');
 
-  if (!userInput || !passInput) {
-    console.error('找不到輸入欄位，請確認 input 的 id 是否為 adminUsername/adminPassword 等對應命名');
-    if (msg) { msg.textContent = '欄位設定有誤，請聯絡開發者'; msg.style.display = 'block'; }
-    return;
-  }
+    // 支援 *Email 或 *Username 兩種命名
+    const base = formId.replace('Form',''); // admin / seller / buyer
+    const emailEl = form.querySelector(`#${base}Email`) || form.querySelector(`#${base}Username`);
+    const passEl  = form.querySelector(`#${base}Password`);
 
-  const username = userInput.value.trim();
-  const password = passInput.value;
-
-  if (!username || !password) {
-    if (msg) { msg.textContent = '用戶名稱和密碼為必填項目！'; msg.style.display = 'block'; }
-    return;
-  }
-  if (msg) msg.style.display = 'none';
-
-  // 決定要打哪一條 API
-  let url = '/api/login';
-  if (formId === 'sellerForm') url = '/api/seller-login';
-  if (formId === 'adminForm') url = '/api/admin-login';
-
-  try {
-    // 成功後儲存 token，導到 /admin/
-    const resp = await fetch('/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: adminUser.value, password: adminPass.value })
-    });
-    const data = await resp.json();
-    if (resp.ok && data.token) {
-      localStorage.setItem('token', data.token);
-      location.href = '/admin/';
-    } else {
-      msg.textContent = data.error || '用戶名或密碼錯誤！';
-      msg.style.display = 'block';
+    if (!emailEl || !passEl) {
+      showMsg(msg, '欄位設定有誤（缺少 Email/Username 或 Password）');
+      return;
     }
 
-  } catch (err) {
-    console.error(err);
-    if (msg) {
-      msg.textContent = '登入時發生錯誤，請稍後再試。';
-      msg.style.display = 'block';
+    const email = (emailEl.value || '').trim();
+    const password = passEl.value || '';
+    if (!email || !password) {
+      showMsg(msg, '帳號與密碼為必填');
+      return;
     }
-  }
+
+    hideMsg(msg);
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.dataset._txt = submitBtn.textContent; submitBtn.textContent = '登入中...'; }
+
+    try {
+      const resp = await fetch(apiPath, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await safeJson(resp);
+      // 成功條件：/admin/login 會回 { token: 'DEV_TOKEN', ... }
+      // /seller/login /buyer/login 我們也回 { success:true, token? }
+      if (resp.ok && (data.token || data.success)) {
+        if (data.token) localStorage.setItem('token', data.token);
+        // 不同角色導向不同頁（可自行調整）
+        window.location.href = resolveRedirect();
+      } else {
+        showMsg(msg, data?.error || '登入失敗');
+      }
+    } catch (err) {
+      console.error(err);
+      showMsg(msg, '網路或伺服器錯誤');
+    } finally {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset._txt || 'LOGIN'; }
+    }
+  });
 }
 
+function showMsg(node, text){ if(node){ node.textContent = text; node.style.display = 'block'; } }
+function hideMsg(node){ if(node){ node.textContent = ''; node.style.display = 'none'; } }
+async function safeJson(resp){ try{ return await resp.json(); }catch{ return null; } }

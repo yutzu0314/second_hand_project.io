@@ -5,8 +5,8 @@
 
 <div class="row">
     <label>Bearer Token:</label>
-    <input id="token" style="width:480px" placeholder="貼上 /admin/login 回來的 token" />
-    <button onclick="loadUsers()">載入用戶</button>
+    <input id="tokenInput" style="width:480px" placeholder="貼上 /admin/login 回來的 token" />
+    <button id="btnLoadUsers" onclick="loadUsers()">載入用戶</button>
     <button onclick="loadReports()">載入檢舉(pending)</button>
 </div>
 
@@ -26,19 +26,19 @@
         <tbody></tbody>
     </table>
     <div class="row">
-        <input id="nuEmail" placeholder="email">
-        <input id="nuPass" placeholder="password">
-        <input id="nuName" placeholder="name">
-        <select id="nuRole">
+        <input id="newEmail" placeholder="email">
+        <input id="newPassword" placeholder="password">
+        <input id="newName" placeholder="name">
+        <select id="newRole">
             <option>buyer</option>
             <option>seller</option>
             <option>admin</option>
         </select>
-        <select id="nuStatus">
+        <select id="newStatus">
             <option>active</option>
             <option>suspended</option>
         </select>
-        <button onclick="createUser()">新增使用者</button>
+        <button id="btnCreateUser" onclick="createUser()">新增使用者</button>
     </div>
 </div>
 
