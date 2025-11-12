@@ -1,0 +1,186 @@
+/* Tabs 膠囊化＋置中 */
+.nav-tabs {
+    border-bottom: none;
+    justify-content: flex-start;
+    margin-bottom: 14px;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-radius: 999px;
+    background: #e6efdf;
+    color: #365b28;
+    font-weight: 700;
+    padding: 6px 18px;
+    margin: 0 6px;
+}
+
+.nav-tabs .nav-link.active {
+    background: #7aa65b;
+    color: #fff;
+}
+
+body {
+    background: #f7f6ee;
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    display: flex;
+    justify-content: center;
+    /* 水平置中 */
+    align-items: center;
+    /* 垂直置中 */
+    height: 100vh;
+    /* 滿版高度 */
+    margin: 0;
+}
+
+
+.login-wrap {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 80px;
+    align-items: center;
+}
+
+
+/* 綠色圓形 logo */
+.logo-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: #426b2f;
+    /* 深綠 */
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 48px;
+    letter-spacing: 12px;
+    margin: 0 auto;
+}
+
+.logo-circle span {
+    transform: translateX(6px);
+}
+
+/* 微調置中視覺 */
+
+.panel {
+    max-width: 560px;
+}
+
+/* 表單容器寬度 */
+.auth-form {
+    width: 460px;          /* 統一輸入框寬度 */
+    margin: 0 auto;
+}
+
+/* 膠囊切換（買家/賣家） */
+.pill-switch .nav-link {
+    background: #e6efdf;
+    color: #365b28;
+    border-radius: 999px;
+    padding: 6px 16px;
+    margin-right: 10px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.pill-switch .nav-link.active {
+    background: #7aa65b;
+    color: #fff;
+}
+
+/* 表單 */
+.auth-form .form-label {
+    font-weight: 700;
+    color: #2c2f2c;
+}
+
+/* 大圓角輸入框（灰底） */
+.big-input.form-control {
+    width: 100%;           /* 佔滿容器 */
+    max-width: 460px;      /* 原本 400px → 改 460px，使灰框變長 */
+    background: #e9ecef;
+    border: 1px solid #cfd4da;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 16px;
+    box-shadow: none;
+}
+
+
+.big-input.form-control:focus {
+    background: #f3f5f7;
+    border-color: #9bbd8b;
+    outline: 0;
+    box-shadow: 0 0 0 2px rgba(122, 166, 91, .2);
+}
+
+/* 錯誤紅框（模擬截圖紅框） */
+.is-invalid-like {
+    background: #fff;
+    border-color: #d9534f !important;
+    box-shadow: 0 0 0 2px rgba(217, 83, 79, .15);
+}
+
+.error-msg {
+    display: none;
+    color: #c83532;
+    font-size: 14px;
+    margin: 8px 0 4px;
+}
+
+.error-msg.show {
+    display: block;
+}
+
+/* 讓三個按鈕水平等寬排列 */
+.action-row {
+    display: flex;
+    justify-content: space-between;
+    /* 三個元素均分 */
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* 綠色 LOGIN 按鈕 */
+.btn-login {
+    background: #566f3f;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 8px 0;
+    width: 100%;
+    flex: 1;
+    /* 平均佔寬 */
+    font-weight: 700;
+    text-align: center;
+}
+
+.btn-login:hover {
+    filter: brightness(0.95);
+}
+
+.links-row {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    margin-top: 8px;
+}
+
+/* 兩個小連結改成按鈕樣式，但透明背景 */
+.btn-link {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 12px;
+    color: #4a6b3c;
+    text-decoration: none;
+    font-weight: 600;
+    background: transparent;
+}
+
+.btn-link:hover {
+    background: #e6efdf;
+}

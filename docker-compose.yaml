@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: secondhand-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: secondhand_db
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppass
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # ports:
+    #   - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-prootpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build: ./backend
+    container_name: secondhand-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./backend/public:/app/public:ro
+
+  phpmyadmin:
+      image: phpmyadmin:latest
+      container_name: secondhand-phpmyadmin
+      environment:
+        PMA_HOST: mysql
+        PMA_PORT: 3306
+        UPLOAD_LIMIT: 128M
+      ports:
+        - "8081:80"
+      depends_on:
+        - mysql
+
+volumes:
+  mysql_data:

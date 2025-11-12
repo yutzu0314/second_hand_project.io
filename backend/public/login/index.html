@@ -1,0 +1,103 @@
+<!doctype html>
+<meta charset="utf-8" />
+
+<head>
+    <title>二手｜登入</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="./style_login.css">
+</head>
+
+<body>
+    <div class="login-wrap">
+        <!-- 左側 Logo 圓 -->
+        <div class="logo-circle">
+            <span>二手</span>
+        </div>
+
+        <div class="panel">
+            <!-- tabs -->
+            <ul class="nav nav-tabs" id="authTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="buyer-login-tab" data-bs-toggle="tab" data-bs-target="#buyer-login" type="button" role="tab">買家</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="seller-login-tab" data-bs-toggle="tab" data-bs-target="#seller-login" type="button" role="tab">賣家</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin-login" type="button" role="tab">管理員</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" >
+                <!-- buyer-login 分頁1 -->
+                <div class="tab-pane fade show active" id="buyer-login" role="tabpanel" aria-labelledby="buyer-login-tab">
+                    <div class="card-body">
+                        <form id="buyerForm" class="auth-form" autocomplete="off" novalidate>
+                            <div class="mb-3">
+                                <input type="text" class="form-control big-input" id="buyerUsername" placeholder="用戶名稱" required>
+                            </div>
+                            <div class="mb-1">
+                                <input type="password" class="form-control big-input" id="buyerPassword" placeholder="密碼" required>
+                            </div>
+
+                            <div class="error-msg" id="buyerError">登入失敗或密碼錯誤</div>
+
+                            <div class="action-row">
+                                <button type="submit" class="btn btn-login">LOGIN</button>
+                                <a href="#" class="btn-link">忘記密碼</a>
+                                <a href="#" class="btn-link">註冊帳號</a>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
+                <!-- seller-login 分頁2 -->
+                <div class="tab-pane fade" id="seller-login" role="tabpanel" aria-labelledby="seller-login-tab">
+                    <div class="card-body">
+                        <form id="sellerForm" class="auth-form" autocomplete="off" novalidate>
+                            <div class="mb-3">
+                                <input type="text" class="form-control big-input" id="sellerUsername" placeholder="用戶名稱" required>
+                            </div>
+                            <div class="mb-1">
+                                <input type="password" class="form-control big-input" id="sellerPassword" placeholder="密碼" required>
+                            </div>
+
+                            <div class="error-msg" id="sellerError">登入失敗或密碼錯誤</div>
+
+                            <div class="action-row">
+                                <button type="submit" class="btn btn-login">LOGIN</button>
+                                <a href="#" class="btn-link">忘記密碼</a>
+                                <a href="#" class="btn-link">註冊帳號</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+
+                <!-- admin-login 分頁3 -->
+                <div class="tab-pane fade" id="admin-login" role="tabpanel" aria-labelledby="admin-login-tab">
+                    <div class="card-body">
+                        <form id="adminForm" class="auth-form" autocomplete="off" novalidate>
+                            <div class="mb-3">
+                                <input type="text" class="form-control big-input" id="adminUsername" placeholder="用戶名稱" required>
+                            </div>
+                            <div class="mb-1">
+                                <input type="password" class="form-control big-input" id="adminPassword" placeholder="密碼" required>
+                            </div>
+                            <div class="error-msg" id="adminError">登入失敗或密碼錯誤</div>
+
+                            <div class="action-row">
+                                <button type="submit" class="btn btn-login">LOGIN</button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+<script defer src="./script_login.js"></script>

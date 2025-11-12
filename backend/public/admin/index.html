@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Admin Panel (Mini)</title>
+<link rel="stylesheet" href="style.css" />
+
+<div class="row">
+    <label>Bearer Token:</label>
+    <input id="token" style="width:480px" placeholder="貼上 /admin/login 回來的 token" />
+    <button onclick="loadUsers()">載入用戶</button>
+    <button onclick="loadReports()">載入檢舉(pending)</button>
+</div>
+
+<div class="card">
+    <h3>用戶清單</h3>
+    <table id="usersTbl">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div class="row">
+        <input id="nuEmail" placeholder="email">
+        <input id="nuPass" placeholder="password">
+        <input id="nuName" placeholder="name">
+        <select id="nuRole">
+            <option>buyer</option>
+            <option>seller</option>
+            <option>admin</option>
+        </select>
+        <select id="nuStatus">
+            <option>active</option>
+            <option>suspended</option>
+        </select>
+        <button onclick="createUser()">新增使用者</button>
+    </div>
+</div>
+
+<div class="card">
+    <h3>檢舉清單（pending）</h3>
+    <table id="reportsTbl">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Reporter</th>
+                <th>Target</th>
+                <th>Type</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+<script src="script.js"></script>
