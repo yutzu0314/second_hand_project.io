@@ -3,6 +3,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -27,6 +28,8 @@ const pool = mysql.createPool({
 // -------------------- 靜態頁 --------------------
 app.use('/login', express.static(path.join(__dirname, 'public/login')));
 app.use('/admin', express.static(path.join(__dirname, 'public/admin')));
+app.use('/buyer', express.static(path.join(__dirname, 'public/buyer')));
+app.use('/seller', express.static(path.join(__dirname, 'public/seller')));
 app.get('/', (req, res) => res.redirect('/login'));
 
 // -------------------- 動態偵測欄位 --------------------
@@ -103,7 +106,7 @@ async function simpleLogin(req, res, roleWanted) {
         `SELECT \`${ID_COL}\` AS id, email, \`${PASS_COL}\` AS pwd
             ${ROLE_COL ? `, \`${ROLE_COL}\` AS role` : `, 'buyer' AS role`}
             ${STATUS_COL ? `, \`${STATUS_COL}\` AS status` : `, 'active' AS status`}
-     FROM users WHERE email = ? LIMIT 1`,
+        FROM users WHERE email = ? LIMIT 1`,
         [email]
     );
     const u = rows[0];
@@ -173,11 +176,21 @@ app.get('/api/reports', async (req, res) => {
     try {
         const status = (req.query.status || 'pending').toString();
         const [rows] = await pool.query(
-            `SELECT report_id AS id, reporter_id, target_type, target_id,
-              reason_code, reason_text, status, created_at
-       FROM reports
-       WHERE status = ?
-       ORDER BY report_id DESC`,
+            `SELECT
+                report_id AS id,
+                reporter_id,
+                target_type,
+                target_id,
+                reason_code,
+                reason_text,
+                status,
+                created_at
+            FROM
+                reports
+            WHERE
+                status = ?
+            ORDER BY
+                report_id DESC`,
             [status]
         );
         res.json(rows);
@@ -187,6 +200,8 @@ app.get('/api/reports', async (req, res) => {
     }
 });
 
+
+
 // 建立檢舉（給前台使用）
 app.post('/api/reports', async (req, res) => {
     try {
@@ -195,8 +210,16 @@ app.post('/api/reports', async (req, res) => {
             return res.status(400).json({ error: 'Missing fields' });
 
         const [r] = await pool.query(
-            `INSERT INTO reports (reporter_id, target_type, target_id, reason_code, reason_text)
-       VALUES (?,?,?,?,?)`,
+            `INSERT INTO
+            reports (
+                reporter_id,
+                target_type,
+                target_id,
+                reason_code,
+                reason_text
+            )
+            VALUES
+                (?, ?, ?, ?, ?)`,
             [reporter_id, target_type, target_id, reason_code, reason_text || null]
         );
         res.status(201).json({ ok: true, id: r.insertId });

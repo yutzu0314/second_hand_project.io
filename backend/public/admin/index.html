@@ -1,62 +1,186 @@
 <!doctype html>
+<html lang="zh-Hant">
 <meta charset="utf-8" />
-<title>Admin Panel (Mini)</title>
+<title>二手｜會員管理後台</title>
 <link rel="stylesheet" href="style.css" />
 
-<div class="row">
-    <label>Bearer Token:</label>
-    <input id="tokenInput" style="width:480px" placeholder="貼上 /admin/login 回來的 token" />
-    <button id="btnLoadUsers" >載入用戶</button>
-    <button id="btnLoadReports" >載入檢舉(pending)</button>
-</div>
+<body class="layout">
+    <!-- 左側側欄 -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-mark">二手</div>
+            <div class="logo-text">
+                <div class="logo-title">Web Survey System</div>
+                <div class="logo-sub">問卷暨會員管理</div>
+            </div>
+        </div>
 
-<div class="card">
-    <h3>用戶清單</h3>
-    <table id="usersTbl">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Email</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <div class="row">
-        <input id="newEmail" placeholder="email">
-        <input id="newPassword" placeholder="password">
-        <input id="newName" placeholder="name">
-        <select id="newRole">
-            <option>buyer</option>
-            <option>seller</option>
-            <option>admin</option>
-        </select>
-        <select id="newStatus">
-            <option>active</option>
-            <option>suspended</option>
-        </select>
-        <button id="btnCreateUser" >新增使用者</button>
-    </div>
-</div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">會員管理</div>
+            <button class="nav-item nav-item-active">用戶樣本管理</button>
 
-<div class="card">
-    <h3>檢舉清單（pending）</h3>
-    <table id="reportsTbl">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Reporter</th>
-                <th>Target</th>
-                <th>Type</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</div>
-<script src="script.js"></script>
+            <div class="nav-section-title">平台管理</div>
+            <button class="nav-item">訂單管理</button>
+            <button class="nav-item">檢舉/申訴管理</button>
+            <button class="nav-item">公告管理</button>
+
+            <div class="nav-section-title">系統設定</div>
+            <button class="nav-item">角色與權限</button>
+            <button class="nav-item">操作紀錄</button>
+        </nav>
+    </aside>
+
+    <!-- 右側主畫面 -->
+    <main class="main">
+        <!-- 上方工具列 -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <div class="breadcrumb">
+                    <span>會員管理</span>
+                    <span class="breadcrumb-sep">›</span>
+                    <span class="breadcrumb-current">會員樣本管理</span>
+                </div>
+                <div class="page-title">會員樣本管理</div>
+            </div>
+
+            <div class="topbar-right">
+                <!-- token 區域 -->
+                <div class="token-row">
+                    <label for="tokenInput">Bearer Token：</label>
+                    <input id="tokenInput" class="token-input" placeholder="貼上 /admin/login 回來的 token" />
+                    <button id="btnLoadUsers" class="btn secondary">載入用戶</button>
+                    <button id="btnLoadReports" class="btn secondary">載入檢舉(pending)</button>
+                </div>
+                <div class="topbar-actions">
+                    <button class="btn danger-outline" id="btnLogout">登出</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 內容區 -->
+        <section class="content">
+
+            <!-- 上方統計卡片 -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">有效會員數</div>
+                    <div class="stat-value" id="statActiveUsers">—</div>
+                    <div class="stat-desc">Status = active</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">停權會員數</div>
+                    <div class="stat-value" id="statSuspendedUsers">—</div>
+                    <div class="stat-desc">Status = suspended</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">待處理檢舉</div>
+                    <div class="stat-value" id="statPendingReports">—</div>
+                    <div class="stat-desc">Status = pending</div>
+                </div>
+            </div>
+
+            <!-- 用戶清單 -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3>用戶清單</h3>
+                        <p class="card-subtitle">管理會員帳號、角色與狀態</p>
+                    </div>
+                    <div class="card-header-actions">
+                        <div class="tabs">
+                            <button class="tab tab-active" data-role-tab data-role="all">全部</button>
+                            <button class="tab" data-role-tab data-role="buyer">買家</button>
+                            <button class="tab" data-role-tab data-role="seller">賣家</button>
+                            <button class="tab" data-role-tab data-role="admin">管理員</button>
+                        </div>
+                        <div class="search-row">
+                            <input class="input" id="userSearchInput" placeholder="搜尋 email / name …">
+                            <select class="input" id="userStatusFilter">
+                                <option value="all">狀態：全部</option>
+                                <option value="active">active</option>
+                                <option value="suspended">suspended</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="usersTbl" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Email</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="card-footer">
+                    <div class="row-inline">
+                        <input id="newEmail" class="input" placeholder="email">
+                        <input id="newPassword" class="input" placeholder="password">
+                        <input id="newName" class="input" placeholder="name">
+
+                        <select id="newRole" class="input">
+                            <option>buyer</option>
+                            <option>seller</option>
+                            <option>admin</option>
+                        </select>
+                        <select id="newStatus" class="input">
+                            <option>active</option>
+                            <option>suspended</option>
+                        </select>
+                        <button id="btnCreateUser" class="btn primary">新增使用者</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 檢舉清單 -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3>檢舉清單（pending）</h3>
+                        <p class="card-subtitle">顯示尚未處理完畢的檢舉案件</p>
+                    </div>
+                    <div class="card-header-actions">
+                        <div class="search-row">
+                            <input class="input" id="reportSearchInput" placeholder="搜尋檢舉人 / 目標會員 …">
+                            <select class="input" id="reportTypeFilter">
+                                <option value="all">檢舉類型：全部</option>
+                                <option value="user">用戶</option>
+                                <option value="product">商品</option>
+                                <option value="order">訂單</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="reportsTbl" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Reporter</th>
+                                <th>Target</th>
+                                <th>Type</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
